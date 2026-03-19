@@ -1,0 +1,21 @@
+name: Update BJJ Data
+on:
+  repository_dispatch:
+    types: [update-data]
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Write data.json
+        run: |
+          echo '${{ github.event.client_payload.data }}' > data.json
+      - name: Commit and push
+        run: |
+          git config user.email "bjj@path.app"
+          git config user.name "BJJ Path"
+          git add data.json
+          git commit -m "📊 BJJ data update" || exit 0
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
