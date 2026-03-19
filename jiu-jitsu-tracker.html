@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BJJ Path — Faixa Azul → Faixa Preta</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--border:#2a2a3f;
+    --accent:#e8c547;--accent2:#ff6b35;--text:#e8e8f0;--text-dim:#7a7a9a;
+    --green:#2ecc71;--red:#e74c3c;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5;}
+
+  /* SYNC BAR */
+  #syncBar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
+  .sync-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .sync-status{font-size:13px;font-weight:600;letter-spacing:1px;display:flex;align-items:center;gap:6px;}
+  .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dim);transition:background .3s;flex-shrink:0;}
+  .sync-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
+  .sync-dot.syncing{background:var(--accent);animation:blink .8s infinite;}
+  .sync-dot.error{background:var(--red);}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .sync-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .btn-sync{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:1px;transition:all .15s;white-space:nowrap;}
+  .btn-sync:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-sync.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--bg);border:none;}
+  .btn-sync.primary:hover{opacity:.88;color:var(--bg);}
+  .sync-time{font-size:11px;color:var(--text-dim);}
+
+  /* MODALS base */
+  .modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(10,10,15,.96);align-items:center;justify-content:center;padding:16px;}
+  .modal-overlay.visible{display:flex;}
+  .modal-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;max-width:480px;width:100%;position:relative;max-height:90vh;overflow-y:auto;}
+  .modal-card h2{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:3px;color:var(--accent);margin-bottom:20px;}
+  .modal-close{position:absolute;top:14px;right:18px;background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;transition:color .15s;}
+  .modal-close:hover{color:var(--text);}
+  .modal-form{display:flex;flex-direction:column;gap:12px;}
+  .modal-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .modal-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;}
+  .modal-label{font-size:11px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;}
+  .modal-input,.modal-select,.modal-textarea{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:9px 12px;font-family:'Rajdhani',sans-serif;font-size:14px;transition:border-color .15s;outline:none;width:100%;}
+  .modal-input:focus,.modal-select:focus,.modal-textarea:focus{border-color:var(--accent);}
+  .modal-input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.6);}
+  .modal-textarea{resize:vertical;min-height:72px;}
+  .modal-note{font-size:12px;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 12px;line-height:1.5;}
+  .modal-btns{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;}
+  .btn-modal-save{flex:1;padding:11px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--bg);font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;cursor:pointer;transition:opacity .15s;}
+  .btn-modal-save:hover{opacity:.88;}
+  .btn-modal-del{padding:11px 18px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;cursor:pointer;transition:background .15s,color .15s;}
+  .btn-modal-del:hover{background:var(--red);color:#fff;}
+
+  /* CONFIRM */
+  #confirmModal{z-index:300;}
+  .confirm-card{background:var(--surface);border:1px solid var(--red);border-radius:14px;padding:28px 24px;max-width:360px;width:100%;text-align:center;}
+  .confirm-card h3{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--red);margin-bottom:10px;}
+  .confirm-card p{color:var(--text-dim);font-size:14px;margin-bottom:22px;line-height:1.5;}
+  .confirm-btns{display:flex;gap:10px;}
+  .btn-confirm-yes{flex:1;padding:10px;border-radius:8px;border:none;background:var(--red);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;cursor:pointer;}
+  .btn-confirm-no{flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;cursor:pointer;}
+  .btn-confirm-no:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* PROMOTION MODAL */
+  #promoModal{z-index:250;}
+  .promo-card{background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:28px 24px;max-width:440px;width:100%;text-align:center;}
+  .promo-card h2{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;background:linear-gradient(135deg,#e8c547,#ff6b35);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;}
+  .promo-card p{color:var(--text-dim);font-size:14px;margin-bottom:20px;line-height:1.6;}
+  .promo-belt-preview{font-size:60px;margin:12px 0;}
+  .promo-stats{display:flex;gap:12px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;}
+  .promo-stat{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;}
+  .promo-stat-val{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--accent);}
+  .promo-stat-lbl{font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
+  .promo-date-group{display:flex;flex-direction:column;gap:4px;margin-bottom:16px;text-align:left;}
+
+  /* MAIN */
+  .container{max-width:900px;margin:0 auto;padding:24px 16px;position:relative;z-index:1;}
+  header{text-align:center;padding:36px 0 28px;}
+  .logo-kanji{font-family:'Noto Sans JP';font-size:11px;letter-spacing:8px;color:var(--text-dim);margin-bottom:8px;}
+  header h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,8vw,80px);letter-spacing:4px;line-height:1;background:linear-gradient(135deg,#e8c547 0%,#ff9f43 50%,#ff6b35 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  header p{margin-top:10px;color:var(--text-dim);font-size:15px;letter-spacing:2px;text-transform:uppercase;}
+  .header-line{width:80px;height:2px;background:var(--accent);margin:16px auto 0;}
+
+  /* RING */
+  .ring-section{display:flex;justify-content:center;margin-bottom:24px;}
+  .ring-wrapper{position:relative;width:160px;height:160px;display:flex;align-items:center;justify-content:center;}
+  .ring-wrapper svg{position:absolute;top:0;left:0;transform:rotate(-90deg);}
+  .ring-bg{fill:none;stroke:var(--surface2);stroke-width:10;}
+  .ring-fill{fill:none;stroke:url(#ringGrad);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1);}
+  .ring-content{text-align:center;z-index:1;}
+  .ring-pct{font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--accent);letter-spacing:1px;line-height:1;}
+  .ring-sub{font-size:11px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;}
+
+  /* XP */
+  .xp-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;}
+  .xp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+  .xp-label{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--accent);}
+  .xp-value{font-size:14px;color:var(--text-dim);}
+  .xp-track{height:14px;background:var(--surface2);border-radius:99px;overflow:hidden;border:1px solid var(--border);}
+  .xp-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#e8c547,#ff6b35);transition:width 1s cubic-bezier(.4,0,.2,1);position:relative;}
+  .xp-fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3));animation:shimmer 2s infinite;}
+  @keyframes shimmer{0%,100%{opacity:.5}50%{opacity:1}}
+  .xp-caption{font-size:12px;color:var(--text-dim);margin-top:6px;text-align:right;}
+
+  /* BELT PATH */
+  .journey-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase;margin-bottom:16px;padding-left:4px;}
+  .belt-path{display:flex;align-items:center;margin-bottom:8px;overflow-x:auto;padding:8px 0;scrollbar-width:none;}
+  .belt-node{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:90px;}
+  .belt-icon{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;transition:transform .2s,box-shadow .2s;}
+  .belt-node:hover .belt-icon{transform:scale(1.08);}
+  .belt-node.active .belt-icon{box-shadow:0 0 0 3px var(--accent),0 0 30px rgba(232,197,71,.5);animation:pulse 2s infinite;}
+  .belt-node.done .belt-icon{box-shadow:0 0 20px rgba(232,197,71,.3);}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px var(--accent),0 0 20px rgba(232,197,71,.4)}50%{box-shadow:0 0 0 5px var(--accent),0 0 40px rgba(232,197,71,.7)}}
+  .belt-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);text-align:center;}
+  .belt-node.done .belt-label,.belt-node.active .belt-label{color:var(--accent);}
+  .belt-connector{flex:1;height:3px;min-width:20px;background:var(--border);position:relative;top:-20px;}
+  .belt-connector.done{background:linear-gradient(90deg,var(--accent),var(--accent2));}
+
+  /* DEGREES */
+  .belt-degrees{display:flex;gap:6px;justify-content:center;margin-top:2px;min-height:16px;}
+  .degree-dot{width:10px;height:10px;border-radius:50%;background:var(--border);border:1px solid var(--border);transition:all .3s;}
+  .degree-dot.earned{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px rgba(232,197,71,.6);}
+  .degree-dot.earned.white{background:#f0f0f0;border-color:#f0f0f0;box-shadow:0 0 6px rgba(240,240,240,.5);}
+
+  /* BELT PANEL */
+  .belt-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:24px;}
+  .belt-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .belt-panel-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--text);}
+  .belt-panel-sub{font-size:12px;color:var(--text-dim);}
+  .degree-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .degree-display{display:flex;gap:5px;align-items:center;}
+  .degree-pip{width:14px;height:14px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);transition:all .2s;}
+  .degree-pip.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px rgba(232,197,71,.5);}
+  .btn-degree{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+  .btn-degree:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-promote{padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--bg);font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px;cursor:pointer;transition:opacity .15s;}
+  .btn-promote:hover{opacity:.88;}
+
+  /* BELT HISTORY */
+  .belt-history-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+  .belt-history-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;}
+  .bhi-emoji{font-size:24px;flex-shrink:0;}
+  .bhi-info{flex:1;}
+  .bhi-title{font-weight:700;font-size:14px;}
+  .bhi-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .bhi-stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;}
+  .bhi-stat{font-size:11px;color:var(--text-dim);}
+  .bhi-stat span{color:var(--accent);font-weight:700;}
+
+  /* STATS */
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 16px;text-align:center;transition:border-color .2s,transform .2s;}
+  .stat-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+  .stat-icon{font-size:28px;margin-bottom:6px;}
+  .stat-value{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);letter-spacing:1px;line-height:1;}
+  .stat-label{font-size:11px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-top:3px;}
+  .stat-sub{font-size:10px;color:var(--text-dim);margin-top:2px;}
+
+  /* SKILLS */
+  .section-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;padding-left:4px;}
+  .skills-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+  @media(max-width:600px){.skills-grid{grid-template-columns:1fr;}}
+  .skill-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .skill-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .skill-name{font-size:15px;font-weight:700;}
+  .skill-meta{display:flex;align-items:center;gap:8px;}
+  .skill-stars{color:var(--accent);font-size:13px;}
+  .skill-score{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--text-dim);letter-spacing:1px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;}
+  .skill-bar-track{height:7px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-bottom:10px;}
+  .skill-bar-fill{height:100%;border-radius:99px;transition:width .8s ease;}
+  .skill-controls{display:flex;gap:6px;margin-top:10px;}
+  .btn-sm{flex:1;padding:6px 0;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s;}
+  .btn-sm:hover{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+  .btn-sm.minus:hover{background:var(--accent2);border-color:var(--accent2);color:white;}
+
+  /* LOG */
+  .log-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:24px;}
+  .log-form{display:flex;flex-direction:column;gap:12px;}
+  .log-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .input-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;}
+  .input-label{font-size:11px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;}
+  .input-field,.textarea-field{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:9px 12px;font-family:'Rajdhani',sans-serif;font-size:14px;transition:border-color .15s;outline:none;}
+  .input-field:focus,.textarea-field:focus{border-color:var(--accent);}
+  .input-field[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.6);}
+  .textarea-field{resize:vertical;min-height:64px;}
+  .retro-badge{display:inline-block;background:#1a1008;border:1px solid var(--accent2);border-radius:5px;padding:2px 8px;font-size:11px;color:var(--accent2);letter-spacing:1px;margin-top:4px;}
+  .btn-log{padding:11px 28px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--bg);font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;cursor:pointer;transition:opacity .15s,transform .1s;align-self:flex-end;}
+  .btn-log:hover{opacity:.9;transform:translateY(-1px);}
+
+  /* ACHIEVEMENTS */
+  .achievements-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:28px;}
+  .achievement{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 10px;text-align:center;transition:border-color .2s,transform .2s;}
+  .achievement.unlocked{border-color:var(--accent);}
+  .achievement.unlocked:hover{transform:scale(1.04);}
+  .achievement-icon{font-size:30px;margin-bottom:6px;}
+  .achievement.locked .achievement-icon{filter:grayscale(1) opacity(.3);}
+  .achievement-name{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+  .achievement.locked .achievement-name{color:var(--text-dim);}
+  .achievement-desc{font-size:10px;color:var(--text-dim);margin-top:3px;}
+
+  /* HISTORY */
+  .history-list{display:flex;flex-direction:column;gap:10px;margin-bottom:40px;}
+  .history-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:12px;transition:border-color .2s;}
+  .history-item.retro{border-left:3px solid var(--accent2);}
+  .history-item:hover{border-color:var(--accent);}
+  .history-date{font-size:11px;color:var(--text-dim);letter-spacing:1px;min-width:65px;text-align:center;flex-shrink:0;padding-top:2px;}
+  .history-badge{font-size:20px;flex-shrink:0;}
+  .history-info{flex:1;min-width:0;}
+  .history-type{font-weight:700;font-size:14px;}
+  .history-note{font-size:12px;color:var(--text-dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .history-xp{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--accent);letter-spacing:1px;flex-shrink:0;}
+  .btn-edit{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:14px;padding:4px 8px;cursor:pointer;transition:all .15s;flex-shrink:0;}
+  .btn-edit:hover{border-color:var(--accent);color:var(--accent);}
+  /* Skill snapshot inside history */
+  .history-skills{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+  .hsk-chip{display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:11px;font-weight:600;}
+  .hsk-stars{font-size:10px;color:var(--accent);}
+  .hsk-score{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.5px;}
+  .history-skills-toggle{font-size:11px;color:var(--text-dim);cursor:pointer;margin-top:5px;display:inline-block;border:none;background:none;padding:0;letter-spacing:.5px;}
+  .history-skills-toggle:hover{color:var(--accent);}
+
+  /* INTENSITY BUTTONS */
+  .intensity-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .intensity-btn{flex:1;min-width:90px;padding:10px 8px;border-radius:8px;border:2px solid var(--border);background:var(--surface2);color:var(--text-dim);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .intensity-btn small{font-size:11px;opacity:.7;}
+  .intensity-btn:hover{border-color:var(--accent);color:var(--text);}
+  .intensity-btn.active{border-color:var(--accent);background:rgba(232,197,71,.12);color:var(--accent);}
+
+  /* BONUS GRID */
+  .bonus-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  @media(max-width:500px){.bonus-grid{grid-template-columns:1fr;}}
+  .bonus-item{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;transition:all .15s;user-select:none;}
+  .bonus-item:hover{border-color:var(--accent);}
+  .bonus-item.checked{border-color:var(--accent);background:rgba(232,197,71,.1);}
+  .bonus-item input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+  .bonus-item label{font-size:13px;font-weight:600;cursor:pointer;flex:1;}
+  .bonus-xp{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--accent);letter-spacing:1px;}
+
+  /* XP PREVIEW */
+  .xp-preview{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;flex-wrap:wrap;}
+  .xp-preview-base{font-size:13px;color:var(--text-dim);}
+  .xp-preview-base strong{color:var(--text);}
+  .xp-preview-bonus{font-size:13px;color:var(--green);}
+  .xp-preview-total{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--accent);letter-spacing:1px;margin-left:auto;}
+  .xp-preview-total strong{font-size:22px;}
+
+  /* CHART */
+  .chart-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;}
+  .chart-controls{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+  .chart-belt-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+  .chart-tab{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:1px;}
+  .chart-tab.active{border-color:var(--accent);color:var(--accent);background:rgba(232,197,71,.1);}
+  .chart-skill-toggles{display:flex;gap:6px;flex-wrap:wrap;}
+  .skill-toggle{padding:4px 10px;border-radius:5px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text-dim);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;}
+  .skill-toggle.active{color:#fff;}
+  .chart-wrap{position:relative;height:260px;}
+  .chart-wrap canvas{width:100%!important;height:100%!important;}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--bg);padding:14px 22px;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;z-index:9999;transform:translateY(100px);opacity:0;transition:all .4s cubic-bezier(.4,0,.2,1);pointer-events:none;max-width:320px;line-height:1.3;}
+  #toast.show{transform:translateY(0);opacity:1;}
+  #toast.err{background:var(--red);}
+</style>
+</head>
+<body>
+
+<!-- SYNC BAR -->
+<div id="syncBar">
+  <div class="sync-left">
+    <div class="sync-status">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncStatusText">Aguardando Google...</span>
+    </div>
+    <span class="sync-time" id="syncTime"></span>
+  </div>
+  <div class="sync-right">
+    <button class="btn-sync" id="btnManualSync" onclick="manualSync()" style="display:none">☁️ Sincronizar</button>
+    <button class="btn-sync primary" id="btnLogin" onclick="startLogin()" style="display:none">🔑 Conectar Google Drive</button>
+    <button class="btn-sync" id="btnLogout" onclick="logout()" style="display:none">Sair</button>
+  </div>
+</div>
+
+<!-- EDIT TRAINING MODAL -->
+<div id="editModal" class="modal-overlay">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeEdit()">✕</button>
+    <h2>✏️ Editar Treino</h2>
+    <div class="modal-form">
+      <div class="modal-row">
+        <div class="modal-group">
+          <label class="modal-label">Tipo de Treino</label>
+          <select class="modal-select" id="editType">
+            <option value="gi">Gi (Kimono)</option>
+            <option value="nogi">No-Gi</option>
+            <option value="drilling">Drilling</option>
+            <option value="competition">Competição 🏆</option>
+            <option value="seminar">Seminário</option>
+          </select>
+        </div>
+        <div class="modal-group">
+          <label class="modal-label">Data</label>
+          <input type="date" class="modal-input" id="editDate">
+        </div>
+      </div>
+      <div class="modal-row">
+        <div class="modal-group">
+          <label class="modal-label">Duração (min)</label>
+          <input type="number" class="modal-input" id="editDuration" min="15" max="300">
+        </div>
+        <div class="modal-group">
+          <label class="modal-label">Intensidade</label>
+          <select class="modal-select" id="editIntensity">
+            <option value="light">Leve</option>
+            <option value="medium">Médio</option>
+            <option value="hard">Pesado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-group">
+        <label class="modal-label">Anotações</label>
+        <textarea class="modal-textarea" id="editNote" placeholder="Observações sobre o treino..."></textarea>
+      </div>
+      <div class="modal-note" id="editXpNote"></div>
+      <div class="modal-btns">
+        <button class="btn-modal-save" onclick="saveEdit()">💾 SALVAR</button>
+        <button class="btn-modal-del" onclick="askDelete()">🗑 EXCLUIR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div id="confirmModal" class="modal-overlay" style="z-index:300">
+  <div class="confirm-card">
+    <h3>⚠️ Excluir Treino?</h3>
+    <p>Essa ação não pode ser desfeita. O XP deste treino será removido do total.</p>
+    <div class="confirm-btns">
+      <button class="btn-confirm-yes" onclick="confirmDelete()">Sim, excluir</button>
+      <button class="btn-confirm-no" onclick="closeConfirm()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROMOTION MODAL -->
+<div id="promoModal" class="modal-overlay" style="z-index:250">
+  <div class="promo-card">
+    <button class="modal-close" onclick="closePromo()" style="color:var(--text-dim)">✕</button>
+    <h2>🏆 TROCA DE FAIXA!</h2>
+    <p id="promoDesc">Parabéns! Você está avançando para a próxima faixa.</p>
+    <div class="promo-belt-preview" id="promoBeltEmoji">🟣</div>
+    <div class="promo-stats" id="promoStats"></div>
+    <div class="promo-date-group">
+      <label class="modal-label">📅 Data da troca de faixa</label>
+      <input type="date" class="modal-input" id="promoDate" style="text-align:center;">
+    </div>
+    <div class="modal-btns" style="justify-content:center">
+      <button class="btn-modal-save" style="max-width:280px" onclick="confirmPromo()">🥋 CONFIRMAR PROMOÇÃO</button>
+    </div>
+  </div>
+</div>
+
+<!-- REGRESSION MODAL -->
+<div id="regressModal" class="modal-overlay" style="z-index:260">
+  <div class="confirm-card" style="border-color:var(--accent2);max-width:400px;">
+    <h3 style="color:var(--accent2)">⚠️ Voltar de Faixa?</h3>
+    <p id="regressDesc">Esta ação vai desfazer a última promoção e restaurar o histórico anterior. Use apenas se promoveu por engano.</p>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text-dim)" id="regressInfo"></div>
+    <div class="confirm-btns">
+      <button class="btn-confirm-yes" style="background:var(--accent2)" onclick="confirmRegress()">↩ Sim, voltar</button>
+      <button class="btn-confirm-no" onclick="closeRegress()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <header>
+    <div class="logo-kanji">柔術道場 — A Jornada</div>
+    <h1>BJJ PATH</h1>
+    <p>Faixa Azul → Faixa Preta · 10 Anos de Jornada</p>
+    <div class="header-line"></div>
+  </header>
+
+  <!-- RING -->
+  <div class="ring-section">
+    <div class="ring-wrapper">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#e8c547"/>
+            <stop offset="100%" stop-color="#ff6b35"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="80" cy="80" r="68"/>
+        <circle class="ring-fill" id="ringFill" cx="80" cy="80" r="68" stroke-dasharray="427" stroke-dashoffset="427"/>
+      </svg>
+      <div class="ring-content">
+        <div class="ring-pct" id="ringPct">0%</div>
+        <div class="ring-sub">Jornada Total</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- XP -->
+  <div class="xp-section">
+    <div class="xp-header">
+      <span class="xp-label" id="xpBeltLabel">⚡ XP — Faixa Azul</span>
+      <span class="xp-value" id="xpLabel">0 / 2.500 XP</span>
+    </div>
+    <div class="xp-track"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+    <div class="xp-caption" id="xpCaption">XP acumulado na faixa atual</div>
+  </div>
+
+  <!-- BELT PATH -->
+  <div class="journey-title">🥋 Caminho das Faixas</div>
+  <div class="belt-path" id="beltPath"></div>
+
+  <!-- BELT CONTROL PANEL -->
+  <div class="belt-panel" id="beltPanel">
+    <div class="belt-panel-header">
+      <div>
+        <div class="belt-panel-title" id="beltPanelTitle">Faixa Azul — Grau 0</div>
+        <div class="belt-panel-sub" id="beltPanelSub">Adicione graus conquistados manualmente</div>
+      </div>
+      <div class="degree-controls">
+        <div class="degree-display" id="degreeDisplay"></div>
+        <button class="btn-degree" onclick="removeDegree()">- Grau</button>
+        <button class="btn-degree" onclick="addDegree()">+ Grau</button>
+        <button class="btn-promote" onclick="openPromo()" id="btnPromote">🥋 Trocar Faixa</button>
+        <button class="btn-degree" onclick="openRegress()" id="btnRegress" style="display:none;border-color:var(--accent2);color:var(--accent2)">↩ Voltar Faixa</button>
+      </div>
+    </div>
+    <!-- Belt history -->
+    <div id="beltHistorySection" style="display:none">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px;">HISTÓRICO DE FAIXAS</div>
+      <div class="belt-history-list" id="beltHistoryList"></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">📅</div>
+      <div class="stat-value" id="statDays">0</div>
+      <div class="stat-label">Dias Únicos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏋️</div>
+      <div class="stat-value" id="statSessions">0</div>
+      <div class="stat-label">Treinos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🔥</div>
+      <div class="stat-value" id="statStreak">0</div>
+      <div class="stat-label">Sequência</div>
+      <div class="stat-sub" id="statStreakSub">dias consecutivos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-value" id="statLevel">1</div>
+      <div class="stat-label">Nível</div>
+    </div>
+  </div>
+
+  <!-- SKILLS -->
+  <div class="section-title">🎯 Atributos Técnicos</div>
+  <div class="skills-grid" id="skillsGrid"></div>
+
+  <!-- LOG -->
+  <div class="log-section">
+    <div class="section-title" style="margin-bottom:16px">📝 Registrar Treino</div>
+    <div class="log-form">
+      <div class="log-row">
+        <div class="input-group">
+          <label class="input-label">Tipo</label>
+          <select class="input-field" id="trainingType">
+            <option value="gi">Gi (Kimono)</option>
+            <option value="nogi">No-Gi</option>
+            <option value="drilling">Drilling</option>
+            <option value="competition">Competição 🏆</option>
+            <option value="seminar">Seminário</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Duração (min)</label>
+          <input type="number" class="input-field" id="trainingDuration" value="90" min="15" max="300">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Data do Treino</label>
+          <input type="date" class="input-field" id="trainingDate">
+          <span class="retro-badge" id="retroBadge" style="display:none">📅 Registro retroativo</span>
+        </div>
+      </div>
+
+      <!-- INTENSIDADE como botões visuais -->
+      <div>
+        <div class="input-label" style="margin-bottom:8px">Intensidade do Treino</div>
+        <div class="intensity-btns">
+          <button type="button" class="intensity-btn" id="int_light"  onclick="selectIntensity('light')">
+            🌱 <span>Leve</span><small>+20 XP</small>
+          </button>
+          <button type="button" class="intensity-btn active" id="int_medium" onclick="selectIntensity('medium')">
+            💪 <span>Normal</span><small>+30 XP</small>
+          </button>
+          <button type="button" class="intensity-btn" id="int_hard"  onclick="selectIntensity('hard')">
+            🔥 <span>Intenso</span><small>+45 XP</small>
+          </button>
+        </div>
+        <input type="hidden" id="trainingIntensity" value="medium">
+      </div>
+
+      <!-- BÔNUS DE XP -->
+      <div>
+        <div class="input-label" style="margin-bottom:8px">Bônus de XP <span style="color:var(--text-dim);font-size:11px">(marque o que se aplicar)</span></div>
+        <div class="bonus-grid" id="bonusGrid"></div>
+      </div>
+
+      <!-- XP PREVIEW -->
+      <div class="xp-preview" id="xpPreview">
+        <span class="xp-preview-base">Base: <strong>30 XP</strong></span>
+        <span class="xp-preview-bonus" id="xpPreviewBonus" style="display:none"></span>
+        <span class="xp-preview-total">= <strong id="xpPreviewTotal">30</strong> XP</span>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Anotações</label>
+        <textarea class="textarea-field" id="trainingNotes" placeholder="O que você treinou? Alguma técnica nova? Insight?"></textarea>
+      </div>
+      <button class="btn-log" onclick="logTraining()">+ REGISTRAR TREINO</button>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENTS -->
+  <!-- EVOLUTION CHART -->
+  <div class="section-title">📈 Evolução dos Atributos</div>
+  <div class="chart-section" id="chartSection">
+    <div class="chart-controls">
+      <div class="chart-belt-tabs" id="chartBeltTabs"></div>
+      <div class="chart-skill-toggles" id="chartSkillToggles"></div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="evolutionChart"></canvas>
+      <div id="chartEmpty" style="display:none;text-align:center;padding:40px;color:var(--text-dim);font-size:14px">
+        Nenhum dado de atributos registrado ainda.<br>Ajuste os atributos técnicos para ver a evolução.
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">🏅 Conquistas</div>
+  <div class="achievements-grid" id="achievementsGrid"></div>
+
+  <!-- HISTORY -->
+  <div class="section-title">
+    📜 Histórico da Faixa Atual
+    <span style="font-size:13px;color:var(--text-dim);font-family:'Rajdhani',sans-serif;letter-spacing:1px;font-weight:400"> (✏️ para editar)</span>
+  </div>
+  <div class="history-list" id="historyList"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════
+const CLIENT_ID  = '525303039846-hac38n0on8ms1l8um3hb8nrte0rh25mj.apps.googleusercontent.com';
+const SCOPES     = 'https://www.googleapis.com/auth/drive.appdata';
+const DRIVE_FILE = 'bjj-path-data.json';
+
+// XP por faixa — meta de 10.000 XP mas continua registrando até troca manual
+const BELT_XP_TARGET = 10000;
+const TOTAL_XP_MAX   = 40000; // 4 faixas x 10k para o anel geral
+
+// XP base por intensidade
+const XP_BASE = { light:20, medium:30, hard:45 };
+
+// XP bônus
+const BONUSES = [
+  { id:'technique', label:'🏆 Aprendeu técnica nova',    xp:10 },
+  { id:'repeat',    label:'🔁 Repetiu e fixou algo',     xp:5  },
+  { id:'tap',       label:'🥇 Finalizou alguém melhor',  xp:15 },
+  { id:'study',     label:'📚 Estudou vídeo / teoria',   xp:10 },
+];
+
+const BELTS = [
+  {name:'Branca',emoji:'⬜',color:'#f0f0f0'},
+  {name:'Azul',  emoji:'🟦',color:'#1a6ee8'},
+  {name:'Roxa',  emoji:'🟣',color:'#7b2d8b'},
+  {name:'Marrom',emoji:'🟤',color:'#8b4513'},
+  {name:'Preta', emoji:'⬛',color:'#111'},
+];
+
+const SKILLS_DEF = [
+  {id:'guarda',     name:'Jogo de Guarda', color:'#1a6ee8'},
+  {id:'passagem',   name:'Passagem',       color:'#e8c547'},
+  {id:'finalizacao',name:'Finalizações',   color:'#ff6b35'},
+  {id:'raspagem',   name:'Raspagens',      color:'#7b2d8b'},
+  {id:'takedown',   name:'Takedowns',      color:'#2ecc71'},
+  {id:'defesa',     name:'Defesa/Escapes', color:'#e74c3c'},
+];
+
+const ACHIEVEMENTS_DEF = [
+  {id:'first', name:'Primeiro Passo',  desc:'1º treino',           icon:'🥋', ok:s=>s.sessions>=1},
+  {id:'week',  name:'Semana Guerreira',desc:'7 dias seguidos',     icon:'🔥', ok:s=>s.streak>=7},
+  {id:'c50',   name:'Meio Século',     desc:'50 treinos',          icon:'💪', ok:s=>s.sessions>=50},
+  {id:'c100',  name:'Centenário',      desc:'100 treinos',         icon:'🎖️',ok:s=>s.sessions>=100},
+  {id:'comp',  name:'Guerreiro',       desc:'1ª competição',       icon:'🏆', ok:s=>s.competitions>=1},
+  {id:'roxa',  name:'Roxo',           desc:'Recebeu faixa roxa',   icon:'🟣', ok:s=>s.beltIndex>=2},
+  {id:'marrom',name:'Veterano',        desc:'Recebeu faixa marrom',icon:'🟤', ok:s=>s.beltIndex>=3},
+  {id:'preta', name:'Sensei',          desc:'Recebeu faixa preta', icon:'⬛', ok:s=>s.beltIndex>=4},
+];
+
+const TYPE_LABELS = {gi:'Gi (Kimono)',nogi:'No-Gi',drilling:'Drilling',competition:'Competição',seminar:'Seminário'};
+const TYPE_BADGES = {gi:'🥋',nogi:'👊',drilling:'🔄',competition:'🏆',seminar:'📚'};
+// TYPE_BONUS removed — XP now based on intensity + bonuses
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+const DEFAULT = () => ({
+  // Current belt
+  beltIndex: 1,       // 1=azul, 2=roxa, 3=marrom, 4=preta
+  degrees: 0,         // 0-4 graus na faixa atual
+  currentXP: 0,       // XP na faixa atual (zera ao trocar)
+  totalXP: 0,         // XP total acumulado (nunca zera, para o anel)
+
+  // Current belt stats
+  sessions: 0,
+  days: 0,
+  streak: 0,
+  competitions: 0,
+  history: [],        // treinos da faixa atual
+
+  // Belt promotions history
+  beltHistory: [],    // [{beltIndex, beltName, xp, sessions, days, degrees, promotionDate, history:[]}]
+
+  // Skills (persist across belts)
+  skills: {guarda:0,passagem:0,finalizacao:0,raspagem:0,takedown:0,defesa:0},
+
+  unlockedAchievements: [],
+  startDate: new Date().toISOString(),
+});
+
+let state       = DEFAULT();
+let accessToken = null;
+let driveFileId = null;
+let isSyncing   = false;
+let tokenClient;
+let editingIdx  = null;
+
+// ══════════════════════════════════════════
+// STORAGE + MIGRATION
+// ══════════════════════════════════════════
+function migrateState(s) {
+  if (!s) return null;
+  if (!Array.isArray(s.beltHistory))          s.beltHistory = [];
+  if (!Array.isArray(s.history))              s.history = [];
+  if (!Array.isArray(s.unlockedAchievements)) s.unlockedAchievements = [];
+  if (typeof s.beltIndex !== 'number')        s.beltIndex = 1;
+  if (typeof s.degrees !== 'number')          s.degrees = 0;
+  if (typeof s.currentXP !== 'number')        s.currentXP = s.xp || 0;
+  if (typeof s.totalXP !== 'number')          s.totalXP = s.xp || 0;
+  if (typeof s.sessions !== 'number')         s.sessions = 0;
+  if (typeof s.days !== 'number')             s.days = 0;
+  if (typeof s.streak !== 'number')           s.streak = 0;
+  if (typeof s.competitions !== 'number')     s.competitions = 0;
+  if (!s.skills) s.skills = {guarda:0,passagem:0,finalizacao:0,raspagem:0,takedown:0,defesa:0};
+  if (!Array.isArray(s.skillSnapshots)) s.skillSnapshots = [];
+  s.history = s.history.map(h => ({
+    ...h,
+    typeKey:   h.typeKey   || 'gi',
+    duration:  h.duration  || 90,
+    intensity: h.intensity || 'medium',
+    dateISO:   h.dateISO   || new Date().toISOString().slice(0,10),
+  }));
+  return s;
+}
+const loadLocal = () => migrateState(JSON.parse(localStorage.getItem('bjjState')||'null'));
+const saveLocal = () => localStorage.setItem('bjjState', JSON.stringify(state));
+
+// ══════════════════════════════════════════
+// DATE HELPERS
+// ══════════════════════════════════════════
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function formatDateBR(iso) {
+  if (!iso) return '—';
+  const [,m,d] = iso.split('-');
+  return `${d}/${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+m-1]}`;
+}
+function isToday(iso) { return iso === todayISO(); }
+
+// ══════════════════════════════════════════
+// XP CALC
+// ══════════════════════════════════════════
+function calcXP(intensityKey, bonusIds=[]) {
+  const base    = XP_BASE[intensityKey] || 30;
+  const bonusXP = BONUSES.filter(b => bonusIds.includes(b.id)).reduce((a,b)=>a+b.xp,0);
+  return base + bonusXP;
+}
+
+// ══════════════════════════════════════════
+// STREAK — calcula dias CONSECUTIVOS até hoje
+// Considera apenas os dias únicos do histórico ATUAL
+// ══════════════════════════════════════════
+function calcStreak(history) {
+  const uniqueDays = [...new Set(history.map(h=>h.dateISO).filter(Boolean))].sort().reverse();
+  if (!uniqueDays.length) return 0;
+
+  const today    = todayISO();
+  const yesterday= new Date(Date.now()-86400000).toISOString().slice(0,10);
+
+  // Only count streak if trained today or yesterday (otherwise streak is broken)
+  if (uniqueDays[0] !== today && uniqueDays[0] !== yesterday) return 0;
+
+  let streak = 1;
+  for (let i = 1; i < uniqueDays.length; i++) {
+    const prev = new Date(uniqueDays[i-1]+'T12:00:00');
+    const curr = new Date(uniqueDays[i]+'T12:00:00');
+    const diffDays = Math.round((prev - curr) / 86400000);
+    if (diffDays === 1) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ══════════════════════════════════════════
+// RECALC FROM HISTORY
+// ══════════════════════════════════════════
+function recalcFromHistory() {
+  state.currentXP   = 0;
+  state.sessions    = state.history.length;
+  state.competitions= 0;
+  const uniqueDays  = new Set();
+
+  state.history.forEach(h => {
+    state.currentXP += h.xp;
+    if (h.dateISO) uniqueDays.add(h.dateISO);
+    if (h.typeKey === 'competition') state.competitions++;
+  });
+
+  state.days    = uniqueDays.size;
+  state.streak  = calcStreak(state.history);
+
+  // totalXP = sum of all belts' XP + current
+  state.totalXP = (state.beltHistory||[]).reduce((acc,b)=>acc+(b.xp||0),0) + state.currentXP;
+}
+
+// ══════════════════════════════════════════
+// DEGREES
+// ══════════════════════════════════════════
+function addDegree() {
+  if (state.degrees >= 4) { toast('Máximo de 4 graus! Hora de trocar de faixa. 🥋'); return; }
+  state.degrees++;
+  save(); renderBeltPanel(); renderBeltPath();
+  toast(`⭐ ${BELTS[state.beltIndex].name} — ${state.degrees}º grau conquistado!`);
+}
+
+function removeDegree() {
+  if (state.degrees <= 0) return;
+  state.degrees--;
+  save(); renderBeltPanel(); renderBeltPath();
+  toast(`Grau removido — ${state.degrees} grau(s) na faixa ${BELTS[state.beltIndex].name}`);
+}
+
+// ══════════════════════════════════════════
+// PROMOTION
+// ══════════════════════════════════════════
+function openPromo() {
+  const nextIdx = state.beltIndex + 1;
+  if (nextIdx > 4) { toast('Você já é faixa preta! 🏆'); return; }
+  const next = BELTS[nextIdx];
+  document.getElementById('promoDesc').textContent =
+    `Você vai arquivar toda a jornada da faixa ${BELTS[state.beltIndex].name} e começar do zero na faixa ${next.name}.`;
+  document.getElementById('promoBeltEmoji').textContent = next.emoji;
+  document.getElementById('promoDate').value = todayISO();
+  document.getElementById('promoDate').max   = todayISO();
+
+  // Stats snapshot
+  const statsEl = document.getElementById('promoStats');
+  statsEl.innerHTML = `
+    <div class="promo-stat"><div class="promo-stat-val">${state.currentXP}</div><div class="promo-stat-lbl">XP Total</div></div>
+    <div class="promo-stat"><div class="promo-stat-val">${state.sessions}</div><div class="promo-stat-lbl">Treinos</div></div>
+    <div class="promo-stat"><div class="promo-stat-val">${state.days}</div><div class="promo-stat-lbl">Dias</div></div>
+    <div class="promo-stat"><div class="promo-stat-val">${state.degrees}</div><div class="promo-stat-lbl">Graus</div></div>
+  `;
+  document.getElementById('promoModal').classList.add('visible');
+}
+
+function closePromo() { document.getElementById('promoModal').classList.remove('visible'); }
+
+function confirmPromo() {
+  const nextIdx = state.beltIndex + 1;
+  if (nextIdx > 4) return;
+  const promotionDate = document.getElementById('promoDate').value || todayISO();
+
+  // Archive current belt
+  state.beltHistory.push({
+    beltIndex:      state.beltIndex,
+    beltName:       BELTS[state.beltIndex].name,
+    beltEmoji:      BELTS[state.beltIndex].emoji,
+    xp:             state.currentXP,
+    sessions:       state.sessions,
+    days:           state.days,
+    degrees:        state.degrees,
+    promotionDate,
+    history:        [...state.history],
+    skillSnapshots: [...(state.skillSnapshots||[])],
+    skillsFinal:    {...state.skills},
+  });
+
+  // Advance belt
+  state.beltIndex      = nextIdx;
+  state.degrees        = 0;
+  state.currentXP      = 0;
+  state.sessions       = 0;
+  state.days           = 0;
+  state.streak         = 0;
+  state.competitions   = 0;
+  state.history        = [];
+  state.skillSnapshots = [];
+  state.totalXP        = (state.beltHistory||[]).reduce((acc,b)=>acc+(b.xp||0),0);
+
+  save(); renderAll(); closePromo();
+  toast(`🎉 PARABÉNS! Bem-vindo à faixa ${BELTS[nextIdx].name}! OSS!`);
+}
+
+// ══════════════════════════════════════════
+// EDIT HISTORY
+// ══════════════════════════════════════════
+function openEdit(idx) {
+  editingIdx = idx;
+  const h = state.history[idx];
+  document.getElementById('editType').value      = h.typeKey || 'gi';
+  document.getElementById('editDate').value      = h.dateISO || todayISO();
+  document.getElementById('editDate').max        = todayISO();
+  document.getElementById('editDuration').value  = h.duration || 90;
+  document.getElementById('editIntensity').value = h.intensity || 'medium';
+  document.getElementById('editNote').value      = h.note || '';
+  document.getElementById('editXpNote').textContent = `XP atual: ${h.xp} XP — será recalculado ao salvar.`;
+  document.getElementById('editModal').classList.add('visible');
+}
+function closeEdit() { document.getElementById('editModal').classList.remove('visible'); editingIdx=null; }
+
+function saveEdit() {
+  if (editingIdx===null) return;
+  const typeKey   = document.getElementById('editType').value;
+  const dateISO   = document.getElementById('editDate').value||todayISO();
+  const duration  = parseInt(document.getElementById('editDuration').value)||90;
+  const intensity = document.getElementById('editIntensity').value;
+  const note      = document.getElementById('editNote').value.trim();
+  const bonusIds  = (state.history[editingIdx]?.bonusIds)||[];
+  const newXP     = calcXP(intensity, bonusIds);
+  const h = state.history[editingIdx];
+  Object.assign(h,{typeKey,type:TYPE_LABELS[typeKey],badge:TYPE_BADGES[typeKey],dateISO,date:formatDateBR(dateISO),duration,intensity,note,xp:newXP,retro:!isToday(dateISO)});
+  state.history.sort((a,b)=>b.dateISO.localeCompare(a.dateISO));
+  saveSkillSnapshot(dateISO);
+  recalcFromHistory();
+  save(); renderAll(); closeEdit();
+  toast(`✅ Treino atualizado! XP: ${newXP}`);
+}
+
+function askDelete() { document.getElementById('confirmModal').classList.add('visible'); }
+function closeConfirm() { document.getElementById('confirmModal').classList.remove('visible'); }
+function confirmDelete() {
+  if (editingIdx===null) return;
+  state.history.splice(editingIdx,1);
+  recalcFromHistory();
+  save(); renderAll(); closeConfirm(); closeEdit();
+  toast('🗑 Treino removido');
+}
+
+// close on backdrop
+['editModal','confirmModal','promoModal','regressModal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{
+    if(e.target===document.getElementById(id)){
+      if(id==='editModal') closeEdit();
+      else if(id==='confirmModal') closeConfirm();
+      else if(id==='promoModal') closePromo();
+      else if(id==='regressModal') closeRegress();
+    }
+  });
+});
+
+// ══════════════════════════════════════════
+// LOG TRAINING
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// INTENSITY & BONUS UI
+// ══════════════════════════════════════════
+function selectIntensity(val) {
+  document.getElementById('trainingIntensity').value = val;
+  ['light','medium','hard'].forEach(v => {
+    document.getElementById('int_'+v).classList.toggle('active', v===val);
+  });
+  updateXPPreview();
+}
+
+function renderBonusGrid() {
+  const grid = document.getElementById('bonusGrid');
+  if (!grid) return;
+  grid.innerHTML = BONUSES.map(b => `
+    <div class="bonus-item" id="bonusitem_${b.id}" onclick="toggleBonus('${b.id}')">
+      <input type="checkbox" id="bonus_${b.id}" onchange="updateXPPreview()" onclick="event.stopPropagation()">
+      <label for="bonus_${b.id}">${b.label}</label>
+      <span class="bonus-xp">+${b.xp}</span>
+    </div>`).join('');
+}
+
+function toggleBonus(id) {
+  const cb = document.getElementById('bonus_'+id);
+  if (cb) { cb.checked = !cb.checked; }
+  document.getElementById('bonusitem_'+id)?.classList.toggle('checked', cb?.checked);
+  updateXPPreview();
+}
+
+function updateXPPreview() {
+  const intensity = document.getElementById('trainingIntensity')?.value || 'medium';
+  const base      = XP_BASE[intensity] || 30;
+  const bonusIds  = BONUSES.map(b=>b.id).filter(id=>document.getElementById('bonus_'+id)?.checked);
+  const bonusXP   = BONUSES.filter(b=>bonusIds.includes(b.id)).reduce((a,b)=>a+b.xp,0);
+  const total     = base + bonusXP;
+
+  const baseEl  = document.querySelector('.xp-preview-base');
+  const bonusEl = document.getElementById('xpPreviewBonus');
+  const totalEl = document.getElementById('xpPreviewTotal');
+
+  if (baseEl)  baseEl.innerHTML  = `Base: <strong>${base} XP</strong>`;
+  if (bonusEl) {
+    if (bonusXP > 0) {
+      bonusEl.textContent  = `+ ${bonusXP} bônus`;
+      bonusEl.style.display = '';
+    } else {
+      bonusEl.style.display = 'none';
+    }
+  }
+  if (totalEl) totalEl.textContent = total;
+}
+
+function logTraining() {
+  const typeKey   = document.getElementById('trainingType').value;
+  const duration  = parseInt(document.getElementById('trainingDuration').value)||90;
+  const intensity = document.getElementById('trainingIntensity').value;
+  const notes     = document.getElementById('trainingNotes').value.trim();
+  const dateISO   = document.getElementById('trainingDate').value||todayISO();
+  const bonusIds  = BONUSES.map(b=>b.id).filter(id=>document.getElementById('bonus_'+id)?.checked);
+  const xp        = calcXP(intensity, bonusIds);
+  const bonusXP   = xp - (XP_BASE[intensity]||30);
+
+  state.history.push({
+    id:Date.now(), dateISO, date:formatDateBR(dateISO),
+    typeKey, type:TYPE_LABELS[typeKey], badge:TYPE_BADGES[typeKey],
+    duration, intensity, bonusIds, note:notes, xp, retro:!isToday(dateISO),
+    skillsSnapshot: {...state.skills}, // snapshot of attributes at time of training
+  });
+  state.history.sort((a,b)=>b.dateISO.localeCompare(a.dateISO));
+  // Save skill snapshot on the training date (so retroactive trainings appear on chart)
+  saveSkillSnapshot(dateISO);
+  recalcFromHistory();
+
+  // uncheck bonuses
+  BONUSES.forEach(b=>{ const el=document.getElementById('bonus_'+b.id); if(el) el.checked=false; });
+  save(); renderAll();
+  document.getElementById('trainingNotes').value='';
+  document.getElementById('trainingDate').value=todayISO();
+  document.getElementById('retroBadge').style.display='none';
+  const msg = bonusXP>0
+    ? `+${XP_BASE[intensity]||30} XP base + ${bonusXP} bônus = ${xp} XP total! 🔥`
+    : `+${xp} XP — OSS! 🔥`;
+  toast(!isToday(dateISO)?`📅 ${formatDateBR(dateISO)} registrado! +${xp} XP`:msg);
+}
+
+// ══════════════════════════════════════════
+// GOOGLE AUTH
+// ══════════════════════════════════════════
+function initGoogle() {
+  try {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id:CLIENT_ID, scope:SCOPES,
+      callback:handleTokenResponse,
+      error_callback:err=>setSyncStatus('error','Erro: '+(err.message||err.type||'?')),
+    });
+  } catch(e){ setSyncStatus('error','Erro ao inicializar Google'); }
+  document.getElementById('btnLogin').style.display='';
+  setSyncStatus('','Clique em "Conectar Google Drive"');
+}
+
+async function handleTokenResponse(resp) {
+  if(resp.error){setSyncStatus('error','Erro OAuth: '+resp.error);return;}
+  accessToken=resp.access_token;
+  document.getElementById('btnLogin').style.display='none';
+  document.getElementById('btnLogout').style.display='';
+  document.getElementById('btnManualSync').style.display='';
+  setSyncStatus('syncing','Carregando...');
+  await loadFromDrive();
+}
+
+function startLogin(){if(!tokenClient)initGoogle();tokenClient.requestAccessToken({prompt:'consent'});}
+function logout(){
+  if(accessToken)google.accounts.oauth2.revoke(accessToken,()=>{});
+  accessToken=null;driveFileId=null;
+  document.getElementById('btnLogin').style.display='';
+  document.getElementById('btnLogout').style.display='none';
+  document.getElementById('btnManualSync').style.display='none';
+  setSyncStatus('','Desconectado');toast('Desconectado do Google Drive');
+}
+
+// ══════════════════════════════════════════
+// DRIVE API
+// ══════════════════════════════════════════
+async function driveReq(url,opts={}){
+  const r=await fetch(url,{...opts,headers:{'Authorization':`Bearer ${accessToken}`,...(opts.headers||{})}});
+  if(!r.ok){const t=await r.text();throw new Error('Drive '+r.status+': '+t.slice(0,120));}
+  return r;
+}
+async function findFile(){const r=await driveReq(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE}'&fields=files(id)`);return(await r.json()).files?.[0]?.id||null;}
+async function readFile(id){return await(await driveReq(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json();}
+async function writeFile(data){
+  const body=JSON.stringify(data);
+  if(driveFileId){
+    await driveReq(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body});
+  } else {
+    const form=new FormData();
+    form.append('metadata',new Blob([JSON.stringify({name:DRIVE_FILE,parents:['appDataFolder']})],{type:'application/json'}));
+    form.append('file',new Blob([body],{type:'application/json'}));
+    const r=await driveReq('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',body:form});
+    driveFileId=(await r.json()).id;
+  }
+}
+async function loadFromDrive(){
+  try{
+    setSyncStatus('syncing','Sincronizando...');
+    driveFileId=await findFile();
+    const local=loadLocal();
+    if(driveFileId){
+      const remote=migrateState(await readFile(driveFileId));
+      state=(local&&local.sessions>(remote.sessions||0))?local:remote;
+      if(local&&local.sessions>(remote.sessions||0))await writeFile(state);else saveLocal();
+    }else{state=local||DEFAULT();await writeFile(state);}
+    recalcFromHistory();
+    renderAll();setSyncStatus('ok','Sincronizado ✓');setLastSync();
+  }catch(e){
+    state=loadLocal()||DEFAULT();recalcFromHistory();renderAll();
+    setSyncStatus('error','Falha na sincronização');toast('⚠️ Dados locais carregados',true);
+  }
+}
+async function syncToDrive(){
+  if(!accessToken||isSyncing)return;isSyncing=true;
+  try{setSyncStatus('syncing','Salvando...');await writeFile(state);setSyncStatus('ok','Salvo ✓');setLastSync();}
+  catch(e){setSyncStatus('error','Erro ao salvar');}
+  isSyncing=false;
+}
+async function manualSync(){if(accessToken)await loadFromDrive();}
+function setSyncStatus(type,text){document.getElementById('syncDot').className='sync-dot'+(type?' '+type:'');document.getElementById('syncStatusText').textContent=text;}
+function setLastSync(){document.getElementById('syncTime').textContent='Sync: '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+function save(){saveLocal();if(accessToken)syncToDrive();}
+
+// ══════════════════════════════════════════
+// SKILLS
+// ══════════════════════════════════════════
+function saveSkillSnapshot(dateISO) {
+  if (!state.skillSnapshots) state.skillSnapshots = [];
+  const snap = { dateISO, date: formatDateBR(dateISO), skills: {...state.skills} };
+  // If snapshot for this date already exists, only update if it's today
+  // (today = always overwrite with latest; past dates = only create if missing)
+  const existingIdx = state.skillSnapshots.findIndex(s => s.dateISO === dateISO);
+  if (existingIdx >= 0) {
+    if (dateISO === todayISO()) {
+      // Today: always update to latest skill values
+      state.skillSnapshots[existingIdx] = snap;
+    }
+    // Past date: keep existing snapshot (it was the state at that time)
+  } else {
+    // No snapshot for this date yet — insert and keep list sorted
+    state.skillSnapshots.push(snap);
+    state.skillSnapshots.sort((a,b) => a.dateISO.localeCompare(b.dateISO));
+  }
+}
+
+function adjustSkill(id, delta) {
+  state.skills[id] = Math.max(0, Math.min(100, (state.skills[id]||0) + delta));
+  saveSkillSnapshot(todayISO());
+  save(); renderSkills(); renderChart();
+  if (delta > 0) toast(`+${delta} em ${SKILLS_DEF.find(s=>s.id===id).name}! 💡`);
+}
+
+// ══════════════════════════════════════════
+// RENDERS
+// ══════════════════════════════════════════
+function renderBeltPath(){
+  const c=document.getElementById('beltPath');c.innerHTML='';
+  BELTS.forEach((b,i)=>{
+    if(i===0)return;
+    const done=i<state.beltIndex, active=i===state.beltIndex;
+    const node=document.createElement('div');
+    node.className='belt-node'+(done?' done':active?' active':'');
+
+    // degrees for this belt
+    let degreesHere=0;
+    if(active) degreesHere=state.degrees;
+    else{const bh=state.beltHistory.find(bh=>bh.beltIndex===i);if(bh)degreesHere=bh.degrees||0;}
+
+    const dotsHTML=Array.from({length:4},(_,d)=>`<div class="degree-dot${d<degreesHere?' earned':''}" title="${d+1}º grau"></div>`).join('');
+
+    node.innerHTML=`
+      <div class="belt-icon" style="background:${b.color}22;border:2px solid ${b.color}${done||active?'cc':'44'}">
+        <span>${b.emoji}</span>
+      </div>
+      <span class="belt-label">${b.name}</span>
+      <div class="belt-degrees">${dotsHTML}</div>`;
+    c.appendChild(node);
+    if(i<4){const conn=document.createElement('div');conn.className='belt-connector'+(done?' done':'');c.appendChild(conn);}
+  });
+}
+
+function renderXP(){
+  const belt=BELTS[state.beltIndex];
+  const target=BELT_XP_TARGET;
+  const pct=Math.min(100,(state.currentXP/target)*100);
+  const totalPct=Math.min(100,(state.totalXP/TOTAL_XP_MAX)*100);
+  const over=state.currentXP>target;
+
+  document.getElementById('xpFill').style.width=pct+'%';
+  document.getElementById('xpFill').style.background=over
+    ? 'linear-gradient(90deg,#ff6b35,#e74c3c)'
+    : 'linear-gradient(90deg,#e8c547,#ff6b35)';
+  document.getElementById('xpBeltLabel').textContent=`⚡ XP — Faixa ${belt.name}`;
+  document.getElementById('xpLabel').textContent=`${state.currentXP.toLocaleString()} / ${target.toLocaleString()} XP${over?' ⚠️ META SUPERADA':''}`;
+  document.getElementById('xpCaption').textContent=over
+    ? `Meta atingida! Troque de faixa quando estiver pronto. 🥋`
+    : `Faltam ${(target-state.currentXP).toLocaleString()} XP para a meta`;
+  document.getElementById('ringFill').style.strokeDashoffset=427-(totalPct/100)*427;
+  document.getElementById('ringPct').textContent=Math.round(totalPct)+'%';
+}
+
+function renderBeltPanel(){
+  const belt=BELTS[state.beltIndex];
+  document.getElementById('beltPanelTitle').textContent=`${belt.emoji} Faixa ${belt.name} — ${state.degrees} Grau${state.degrees!==1?'s':''}`;
+  document.getElementById('beltPanelSub').textContent=
+    state.degrees<4?`${4-state.degrees} grau(s) restante(s) para trocar de faixa`:'4 graus conquistados — hora de trocar de faixa! 🥋';
+
+  // degree pips
+  const disp=document.getElementById('degreeDisplay');
+  disp.innerHTML=Array.from({length:4},(_,i)=>`<div class="degree-pip${i<state.degrees?' on':''}" title="${i+1}º grau"></div>`).join('');
+
+  // hide promote if already black belt
+  document.getElementById('btnPromote').style.display=state.beltIndex>=4?'none':'';
+  document.getElementById('btnRegress').style.display=(state.beltHistory&&state.beltHistory.length>0)?'':'none';
+
+  // belt history
+  const bhs=document.getElementById('beltHistorySection');
+  const bhl=document.getElementById('beltHistoryList');
+  if(state.beltHistory.length>0){
+    bhs.style.display='';
+    bhl.innerHTML=state.beltHistory.map(bh=>`
+      <div class="belt-history-item">
+        <div class="bhi-emoji">${bh.beltEmoji||'🟦'}</div>
+        <div class="bhi-info">
+          <div class="bhi-title">Faixa ${bh.beltName} — ${bh.degrees} grau(s)</div>
+          <div class="bhi-sub">Promovido em ${formatDateBR(bh.promotionDate)}</div>
+          <div class="bhi-stats">
+            <div class="bhi-stat">Treinos: <span>${bh.sessions}</span></div>
+            <div class="bhi-stat">Dias: <span>${bh.days}</span></div>
+            <div class="bhi-stat">XP: <span>${bh.xp}</span></div>
+          </div>
+        </div>
+      </div>`).join('');
+  } else { bhs.style.display='none'; }
+}
+
+function renderStats(){
+  document.getElementById('statDays').textContent    =state.days;
+  document.getElementById('statSessions').textContent=state.sessions;
+  document.getElementById('statStreak').textContent  =state.streak;
+  document.getElementById('statStreakSub').textContent=state.streak===1?'dia consecutivo':'dias consecutivos';
+  document.getElementById('statLevel').textContent   =Math.floor(state.currentXP/200)+1;
+}
+
+function starsFromScore(score){
+  const n = Math.round(Math.min(100,score)/20);
+  return '★'.repeat(n)+'☆'.repeat(5-n);
+}
+
+function renderSkills(){
+  const c=document.getElementById('skillsGrid');c.innerHTML='';
+  SKILLS_DEF.forEach(sk=>{
+    const val = state.skills[sk.id]||0;
+    const pct = Math.min(100,val);
+    const stars = starsFromScore(pct);
+    const card = document.createElement('div');
+    card.className='skill-card';
+    card.innerHTML=`
+      <div class="skill-header">
+        <span class="skill-name">${sk.name}</span>
+        <div class="skill-meta">
+          <span class="skill-stars">${stars}</span>
+          <span class="skill-score" style="color:${sk.color}">${val}pts</span>
+        </div>
+      </div>
+      <div class="skill-bar-track">
+        <div class="skill-bar-fill" style="width:${pct}%;background:${sk.color}"></div>
+      </div>
+      <div class="skill-controls">
+        <button class="btn-sm minus" onclick="adjustSkill('${sk.id}',-5)">- 5</button>
+        <button class="btn-sm" onclick="adjustSkill('${sk.id}',5)">+ 5</button>
+        <button class="btn-sm" onclick="adjustSkill('${sk.id}',10)">+ 10</button>
+      </div>`;
+    c.appendChild(card);
+  });
+}
+
+function renderAchievements(){
+  const c=document.getElementById('achievementsGrid');c.innerHTML='';
+  ACHIEVEMENTS_DEF.forEach(a=>{
+    const unlocked=a.ok(state),was=state.unlockedAchievements.includes(a.id);
+    if(unlocked&&!was){state.unlockedAchievements.push(a.id);setTimeout(()=>toast(`🏅 Conquista: ${a.name}!`),400);}
+    const div=document.createElement('div');
+    div.className='achievement '+(unlocked?'unlocked':'locked');
+    div.innerHTML=`<div class="achievement-icon">${a.icon}</div><div class="achievement-name">${a.name}</div><div class="achievement-desc">${a.desc}</div>`;
+    c.appendChild(div);
+  });
+}
+
+function intensityLabel(v){ return {light:'🌱 Leve',medium:'💪 Normal',hard:'🔥 Intenso'}[v]||''; }
+
+function buildSkillChips(snap) {
+  if (!snap) return '';
+  return SKILLS_DEF.map(sk => {
+    const val   = snap[sk.id] || 0;
+    const stars = starsFromScore(val);
+    return `<div class="hsk-chip">
+      <span style="width:8px;height:8px;border-radius:50%;background:${sk.color};display:inline-block;flex-shrink:0"></span>
+      <span>${sk.name}</span>
+      <span class="hsk-stars">${stars}</span>
+      <span class="hsk-score" style="color:${sk.color}">${val}pts</span>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const c=document.getElementById('historyList');c.innerHTML='';
+  [...state.history].slice(0,20).forEach((h,i)=>{
+    const div=document.createElement('div');
+    div.className='history-item'+(h.retro?' retro':'');
+    const hasSnap = h.skillsSnapshot && Object.keys(h.skillsSnapshot).length>0;
+    const chipId  = 'skills_'+i;
+    div.innerHTML=`
+      <div class="history-date">${h.date}${h.retro?'<br><span style="font-size:9px;color:var(--accent2)">retroativo</span>':''}</div>
+      <div class="history-badge">${h.badge}</div>
+      <div class="history-info">
+        <div class="history-type">${h.type} <span style="font-size:11px;color:var(--text-dim)">${intensityLabel(h.intensity)}</span></div>
+        ${(h.bonusIds||[]).length?`<div class="history-note">${(h.bonusIds||[]).map(id=>BONUSES.find(b=>b.id===id)?.label||'').filter(Boolean).join(' · ')}</div>`:''}
+        ${h.note?`<div class="history-note" style="color:var(--text-dim)">${h.note}</div>`:''}
+        ${hasSnap ? `
+          <button class="history-skills-toggle" onclick="toggleSkillChips('${chipId}')">📊 Ver atributos ▾</button>
+          <div class="history-skills" id="${chipId}" style="display:none">
+            ${buildSkillChips(h.skillsSnapshot)}
+          </div>` : ''}
+      </div>
+      <div class="history-xp">+${h.xp} XP</div>
+      <button class="btn-edit" onclick="openEdit(${i})" title="Editar">✏️</button>`;
+    c.appendChild(div);
+  });
+  if(!state.history.length)
+    c.innerHTML='<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:14px">Nenhum treino nesta faixa ainda. Vai treinar! 💪</div>';
+}
+
+function toggleSkillChips(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isHidden = el.style.display === 'none';
+  el.style.display = isHidden ? 'flex' : 'none';
+  // Update button label
+  const btn = el.previousElementSibling;
+  if (btn) btn.textContent = isHidden ? '📊 Fechar atributos ▴' : '📊 Ver atributos ▾';
+}
+
+// ══════════════════════════════════════════
+// REGRESSION
+// ══════════════════════════════════════════
+function openRegress() {
+  if (!state.beltHistory || state.beltHistory.length === 0) {
+    toast('Nenhuma faixa anterior para voltar.', true); return;
+  }
+  const prev = state.beltHistory[state.beltHistory.length - 1];
+  document.getElementById('regressInfo').innerHTML =
+    `Voltará para: <strong>${prev.beltEmoji} Faixa ${prev.beltName}</strong> com ${prev.sessions} treinos e ${prev.xp} XP arquivados.`;
+  document.getElementById('regressModal').classList.add('visible');
+}
+function closeRegress() { document.getElementById('regressModal').classList.remove('visible'); }
+function confirmRegress() {
+  if (!state.beltHistory || state.beltHistory.length === 0) return;
+  const prev = state.beltHistory.pop();
+  state.beltIndex      = prev.beltIndex;
+  state.degrees        = prev.degrees || 0;
+  state.currentXP      = prev.xp || 0;
+  state.sessions       = prev.sessions || 0;
+  state.days           = prev.days || 0;
+  state.competitions   = prev.competitions || 0;
+  state.history        = [...(prev.history||[])];
+  state.skillSnapshots = [...(prev.skillSnapshots||[])];
+  if (prev.skillsFinal) state.skills = {...prev.skillsFinal};
+  state.totalXP        = (state.beltHistory||[]).reduce((acc,b)=>acc+(b.xp||0),0) + state.currentXP;
+  state.streak         = calcStreak(state.history);
+  save(); renderAll(); closeRegress();
+  toast(`↩ Voltou para faixa ${BELTS[state.beltIndex].name}. Histórico restaurado.`);
+}
+
+// ══════════════════════════════════════════
+// EVOLUTION CHART
+// ══════════════════════════════════════════
+let chartInstance  = null;
+let chartBeltView  = 'current'; // 'current' or beltHistory index (number)
+let activeSkills   = new Set(SKILLS_DEF.map(s=>s.id));
+
+const SKILL_COLORS = {
+  guarda:'#1a6ee8', passagem:'#e8c547', finalizacao:'#ff6b35',
+  raspagem:'#7b2d8b', takedown:'#2ecc71', defesa:'#e74c3c',
+};
+
+function getSnapshotsForView() {
+  if (chartBeltView === 'current') return state.skillSnapshots || [];
+  const bh = state.beltHistory[chartBeltView];
+  return bh ? (bh.skillSnapshots || []) : [];
+}
+
+function renderChartTabs() {
+  const tabs = document.getElementById('chartBeltTabs');
+  if (!tabs) return;
+  const items = [
+    {key:'current', label:`${BELTS[state.beltIndex].emoji} Atual`},
+    ...(state.beltHistory||[]).map((bh,i)=>({key:i, label:`${bh.beltEmoji} ${bh.beltName}`})),
+  ];
+  tabs.innerHTML = items.map(t =>
+    `<button class="chart-tab${chartBeltView===t.key?' active':''}" onclick="switchChartBelt('${t.key}')">${t.label}</button>`
+  ).join('');
+}
+
+function renderSkillToggles() {
+  const el = document.getElementById('chartSkillToggles');
+  if (!el) return;
+  el.innerHTML = SKILLS_DEF.map(sk =>
+    `<button class="skill-toggle${activeSkills.has(sk.id)?' active':''}"
+      style="${activeSkills.has(sk.id)?'border-color:'+SKILL_COLORS[sk.id]+';background:'+SKILL_COLORS[sk.id]+'33':''}"
+      onclick="toggleSkillChart('${sk.id}')">${sk.name}</button>`
+  ).join('');
+}
+
+function switchChartBelt(key) {
+  chartBeltView = key === 'current' ? 'current' : parseInt(key);
+  renderChartTabs();
+  renderChart();
+}
+
+function toggleSkillChart(id) {
+  if (activeSkills.has(id)) { if(activeSkills.size>1) activeSkills.delete(id); }
+  else activeSkills.add(id);
+  renderSkillToggles();
+  renderChart();
+}
+
+function renderChart() {
+  renderChartTabs();
+  renderSkillToggles();
+
+  const snaps = getSnapshotsForView();
+  const empty  = document.getElementById('chartEmpty');
+  const canvas = document.getElementById('evolutionChart');
+  if (!canvas) return;
+
+  if (!snaps.length) {
+    canvas.style.display = 'none';
+    if (empty) empty.style.display = '';
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    return;
+  }
+  canvas.style.display = '';
+  if (empty) empty.style.display = 'none';
+
+  // ── Build unified timeline ──
+  // Collect all unique dates from: snapshots + training history
+  const trainingDates = (chartBeltView === 'current'
+    ? state.history
+    : (state.beltHistory[chartBeltView]?.history || [])
+  ).map(h => h.dateISO).filter(Boolean);
+
+  const allDates = [...new Set([
+    ...snaps.map(s => s.dateISO),
+    ...trainingDates,
+  ])].filter(Boolean).sort();
+
+  if (!allDates.length) {
+    canvas.style.display = 'none';
+    if (empty) empty.style.display = '';
+    return;
+  }
+
+  // ── For each date, find the skill values ──
+  // Strategy: carry forward the last known value (last snapshot on or before this date)
+  // For dates before any snapshot, use 0
+  const sortedSnaps = [...snaps].sort((a,b) => a.dateISO.localeCompare(b.dateISO));
+
+  function getSkillValueAtDate(skillId, dateISO) {
+    // Find the last snapshot on or before this date
+    let val = 0;
+    for (const snap of sortedSnaps) {
+      if (snap.dateISO <= dateISO) val = snap.skills?.[skillId] ?? val;
+      else break;
+    }
+    return val;
+  }
+
+  const labels = allDates.map(d => formatDateBR(d));
+
+  const datasets = SKILLS_DEF
+    .filter(sk => activeSkills.has(sk.id))
+    .map(sk => ({
+      label: sk.name,
+      data: allDates.map(d => getSkillValueAtDate(sk.id, d)),
+      borderColor: SKILL_COLORS[sk.id],
+      backgroundColor: SKILL_COLORS[sk.id] + '18',
+      borderWidth: 2,
+      pointRadius: allDates.length < 30 ? 4 : 2,
+      pointHoverRadius: 6,
+      tension: 0.35,
+      fill: false,
+    }));
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  chartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#12121a',
+          borderColor: '#2a2a3f',
+          borderWidth: 1,
+          titleColor: '#e8e8f0',
+          bodyColor: '#b0b0c8',
+          padding: 12,
+          callbacks: {
+            title: items => `📅 ${items[0].label}`,
+            label: item => ` ${item.dataset.label}: ${item.parsed.y}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color:'#7a7a9a', font:{size:11}, maxRotation:45, maxTicksLimit:10 },
+          grid:  { color:'#1e1e2e' },
+        },
+        y: {
+          min: 0, max: 100,
+          ticks: { color:'#7a7a9a', font:{size:11}, stepSize:20,
+            callback: v => v+'%' },
+          grid: { color:'#1e1e2e' },
+        },
+      },
+    },
+  });
+}
+
+function renderAll(){renderXP();renderBeltPath();renderBeltPanel();renderStats();renderSkills();renderChart();renderAchievements();renderHistory();}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let toastT;
+function toast(msg,err=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=err?'err':'';
+  el.classList.add('show');clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('show'),3400);
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  const di=document.getElementById('trainingDate');
+  di.value=todayISO();di.max=todayISO();
+  di.addEventListener('change',()=>{
+    document.getElementById('retroBadge').style.display=isToday(di.value)?'none':'inline-block';
+  });
+  renderBonusGrid();
+  updateXPPreview();
+});
+
+window.addEventListener('load',()=>{
+  state=loadLocal()||DEFAULT();
+  recalcFromHistory();
+  renderAll();
+  setSyncStatus('','Aguardando Google...');
+  let attempts=0;
+  const wait=setInterval(()=>{
+    attempts++;
+    if(window.google?.accounts?.oauth2){clearInterval(wait);initGoogle();}
+    else if(attempts>50){clearInterval(wait);setSyncStatus('error','Google não carregou');document.getElementById('btnLogin').style.display='';}
+  },200);
+});
+</script>
+</body>
+</html>
