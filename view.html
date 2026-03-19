@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BJJ Path — Acompanhe a Jornada</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--border:#2a2a3f;--accent:#e8c547;--accent2:#ff6b35;--text:#e8e8f0;--text-dim:#7a7a9a;--green:#2ecc71;--red:#e74c3c;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5;}
+  #topBar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
+  .top-brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;background:linear-gradient(135deg,#e8c547,#ff6b35);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .top-status{font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:6px;}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--text-dim);}
+  .status-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .status-dot.loading{background:var(--accent);animation:blink .8s infinite;}
+  .status-dot.error{background:var(--red);}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  #loadingScreen{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+  .loading-emoji{font-size:60px;animation:spin 2s linear infinite;}
+  @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+  .loading-text{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:var(--text-dim);}
+  .container{max-width:900px;margin:0 auto;padding:24px 16px;position:relative;z-index:1;}
+  header{text-align:center;padding:30px 0 24px;}
+  .logo-kanji{font-family:'Noto Sans JP';font-size:11px;letter-spacing:8px;color:var(--text-dim);margin-bottom:8px;}
+  header h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(38px,7vw,72px);letter-spacing:4px;line-height:1;background:linear-gradient(135deg,#e8c547 0%,#ff9f43 50%,#ff6b35 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  header p{margin-top:10px;color:var(--text-dim);font-size:14px;letter-spacing:2px;text-transform:uppercase;}
+  .header-line{width:80px;height:2px;background:var(--accent);margin:14px auto 0;}
+  .viewer-badge{display:inline-block;margin-top:10px;padding:4px 14px;border-radius:99px;border:1px solid var(--border);font-size:11px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;}
+  .ring-section{display:flex;justify-content:center;margin-bottom:24px;}
+  .ring-wrapper{position:relative;width:160px;height:160px;display:flex;align-items:center;justify-content:center;}
+  .ring-wrapper svg{position:absolute;top:0;left:0;transform:rotate(-90deg);}
+  .ring-bg{fill:none;stroke:var(--surface2);stroke-width:10;}
+  .ring-fill{fill:none;stroke:url(#ringGrad);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1);}
+  .ring-content{text-align:center;z-index:1;}
+  .ring-pct{font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--accent);letter-spacing:1px;line-height:1;}
+  .ring-sub{font-size:11px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;}
+  .xp-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;}
+  .xp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+  .xp-label{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--accent);}
+  .xp-value{font-size:14px;color:var(--text-dim);}
+  .xp-track{height:14px;background:var(--surface2);border-radius:99px;overflow:hidden;border:1px solid var(--border);}
+  .xp-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#e8c547,#ff6b35);transition:width 1.2s cubic-bezier(.4,0,.2,1);position:relative;}
+  .xp-fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3));animation:shimmer 2s infinite;}
+  @keyframes shimmer{0%,100%{opacity:.5}50%{opacity:1}}
+  .xp-caption{font-size:12px;color:var(--text-dim);margin-top:6px;text-align:right;}
+  .section-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;padding-left:4px;}
+  .belt-path{display:flex;align-items:center;margin-bottom:8px;overflow-x:auto;padding:8px 0;scrollbar-width:none;}
+  .belt-node{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:90px;}
+  .belt-icon{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;}
+  .belt-node.active .belt-icon{box-shadow:0 0 0 3px var(--accent),0 0 30px rgba(232,197,71,.5);animation:pulse 2s infinite;}
+  .belt-node.done .belt-icon{box-shadow:0 0 20px rgba(232,197,71,.3);}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px var(--accent),0 0 20px rgba(232,197,71,.4)}50%{box-shadow:0 0 0 5px var(--accent),0 0 40px rgba(232,197,71,.7)}}
+  .belt-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);text-align:center;}
+  .belt-node.done .belt-label,.belt-node.active .belt-label{color:var(--accent);}
+  .belt-connector{flex:1;height:3px;min-width:20px;background:var(--border);position:relative;top:-20px;}
+  .belt-connector.done{background:linear-gradient(90deg,var(--accent),var(--accent2));}
+  .belt-degrees{display:flex;gap:5px;justify-content:center;margin-top:2px;}
+  .degree-dot{width:9px;height:9px;border-radius:50%;background:var(--border);}
+  .degree-dot.earned{background:var(--accent);box-shadow:0 0 5px rgba(232,197,71,.6);}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 16px;text-align:center;transition:border-color .2s,transform .2s;}
+  .stat-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+  .stat-icon{font-size:28px;margin-bottom:6px;}
+  .stat-value{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);letter-spacing:1px;line-height:1;}
+  .stat-label{font-size:11px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-top:3px;}
+  .skills-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+  @media(max-width:600px){.skills-grid{grid-template-columns:1fr;}}
+  .skill-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .skill-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .skill-name{font-size:15px;font-weight:700;}
+  .skill-meta{display:flex;align-items:center;gap:8px;}
+  .skill-stars{color:var(--accent);font-size:13px;}
+  .skill-score{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;}
+  .skill-bar-track{height:7px;background:var(--surface2);border-radius:99px;overflow:hidden;}
+  .skill-bar-fill{height:100%;border-radius:99px;transition:width 1s ease;}
+  .chart-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;}
+  .chart-controls{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+  .chart-belt-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+  .chart-tab{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:1px;}
+  .chart-tab.active{border-color:var(--accent);color:var(--accent);background:rgba(232,197,71,.1);}
+  .chart-skill-toggles{display:flex;gap:6px;flex-wrap:wrap;}
+  .skill-toggle{padding:4px 10px;border-radius:5px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text-dim);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;}
+  .chart-wrap{position:relative;height:260px;}
+  .chart-wrap canvas{width:100%!important;height:100%!important;}
+  .achievements-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:24px;}
+  .achievement{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 10px;text-align:center;transition:border-color .2s,transform .2s;}
+  .achievement.unlocked{border-color:var(--accent);}
+  .achievement.unlocked:hover{transform:scale(1.04);}
+  .achievement-icon{font-size:30px;margin-bottom:6px;}
+  .achievement.locked .achievement-icon{filter:grayscale(1) opacity(.3);}
+  .achievement-name{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+  .achievement.locked .achievement-name{color:var(--text-dim);}
+  .achievement-desc{font-size:10px;color:var(--text-dim);margin-top:3px;}
+  .history-list{display:flex;flex-direction:column;gap:10px;margin-bottom:24px;}
+  .history-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:12px;}
+  .history-item.retro{border-left:3px solid var(--accent2);}
+  .history-date{font-size:11px;color:var(--text-dim);min-width:65px;text-align:center;flex-shrink:0;padding-top:2px;}
+  .history-badge{font-size:20px;flex-shrink:0;}
+  .history-info{flex:1;min-width:0;}
+  .history-type{font-weight:700;font-size:14px;}
+  .history-note{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .history-xp{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--accent);letter-spacing:1px;flex-shrink:0;}
+  .history-skills{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+  .hsk-chip{display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:11px;font-weight:600;}
+  .hsk-stars{font-size:10px;color:var(--accent);}
+  .hsk-score{font-family:'Bebas Neue',sans-serif;font-size:12px;}
+  .history-skills-toggle{font-size:11px;color:var(--text-dim);cursor:pointer;margin-top:5px;display:inline-block;border:none;background:none;padding:0;}
+  .history-skills-toggle:hover{color:var(--accent);}
+  .belt-history-list{display:flex;flex-direction:column;gap:8px;margin-bottom:28px;}
+  .belt-history-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;}
+  .bhi-emoji{font-size:24px;flex-shrink:0;}
+  .bhi-info{flex:1;}
+  .bhi-title{font-weight:700;font-size:14px;}
+  .bhi-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .bhi-stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;}
+  .bhi-stat{font-size:11px;color:var(--text-dim);}
+  .bhi-stat span{color:var(--accent);font-weight:700;}
+  .viewer-footer{text-align:center;padding:20px;color:var(--text-dim);font-size:12px;letter-spacing:1px;}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen">
+  <div class="loading-emoji">🥋</div>
+  <div class="loading-text">Carregando jornada...</div>
+</div>
+
+<div id="topBar">
+  <div class="top-brand">BJJ PATH</div>
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div class="top-status">
+      <div class="status-dot loading" id="statusDot"></div>
+      <span id="statusText">Carregando...</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim)" id="topUpdated"></div>
+  </div>
+</div>
+
+<div class="container">
+  <header>
+    <div class="logo-kanji">柔術道場 — A Jornada</div>
+    <h1>BJJ PATH</h1>
+    <p>Acompanhe a evolução · Faixa Azul → Faixa Preta</p>
+    <div class="header-line"></div>
+    <div class="viewer-badge">👁 Modo Visualização</div>
+  </header>
+
+  <div class="ring-section">
+    <div class="ring-wrapper">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#e8c547"/>
+            <stop offset="100%" stop-color="#ff6b35"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="80" cy="80" r="68"/>
+        <circle class="ring-fill" id="ringFill" cx="80" cy="80" r="68" stroke-dasharray="427" stroke-dashoffset="427"/>
+      </svg>
+      <div class="ring-content">
+        <div class="ring-pct" id="ringPct">0%</div>
+        <div class="ring-sub">Jornada Total</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="xp-section">
+    <div class="xp-header">
+      <span class="xp-label" id="xpBeltLabel">⚡ XP</span>
+      <span class="xp-value" id="xpLabel">0 / 10.000 XP</span>
+    </div>
+    <div class="xp-track"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+    <div class="xp-caption" id="xpCaption"></div>
+  </div>
+
+  <div class="section-title">🥋 Caminho das Faixas</div>
+  <div class="belt-path" id="beltPath"></div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-value" id="statDays">0</div><div class="stat-label">Dias Treinando</div></div>
+    <div class="stat-card"><div class="stat-icon">🏋️</div><div class="stat-value" id="statSessions">0</div><div class="stat-label">Treinos</div></div>
+    <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-value" id="statStreak">0</div><div class="stat-label">Sequência</div></div>
+    <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-value" id="statLevel">1</div><div class="stat-label">Nível</div></div>
+  </div>
+
+  <div class="section-title">🎯 Atributos Técnicos</div>
+  <div class="skills-grid" id="skillsGrid"></div>
+
+  <div class="section-title">📈 Evolução dos Atributos</div>
+  <div class="chart-section">
+    <div class="chart-controls">
+      <div class="chart-belt-tabs" id="chartBeltTabs"></div>
+      <div class="chart-skill-toggles" id="chartSkillToggles"></div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="evolutionChart"></canvas>
+      <div id="chartEmpty" style="display:none;text-align:center;padding:40px;color:var(--text-dim);font-size:14px">Nenhum dado de atributos ainda.</div>
+    </div>
+  </div>
+
+  <div class="section-title">🏅 Conquistas</div>
+  <div class="achievements-grid" id="achievementsGrid"></div>
+
+  <div id="beltHistorySection" style="display:none">
+    <div class="section-title">📜 Histórico de Faixas</div>
+    <div class="belt-history-list" id="beltHistoryList"></div>
+  </div>
+
+  <div class="section-title">📋 Últimos Treinos</div>
+  <div class="history-list" id="historyList"></div>
+
+  <div class="viewer-footer">Dados atualizados pelo atleta · BJJ Path Viewer</div>
+</div>
+
+<script>
+const GH_OWNER='viniciusgmmattos-afk',GH_REPO='bjj-path',GH_FILE='data.json';
+const DATA_URL=`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}`;
+const TOTAL_XP_MAX=40000,BELT_XP_TARGET=10000;
+const BELTS=[{name:'Branca',emoji:'⬜',color:'#f0f0f0'},{name:'Azul',emoji:'🟦',color:'#1a6ee8'},{name:'Roxa',emoji:'🟣',color:'#7b2d8b'},{name:'Marrom',emoji:'🟤',color:'#8b4513'},{name:'Preta',emoji:'⬛',color:'#111'}];
+const SKILLS_DEF=[{id:'guarda',name:'Jogo de Guarda',color:'#1a6ee8'},{id:'passagem',name:'Passagem',color:'#e8c547'},{id:'finalizacao',name:'Finalizações',color:'#ff6b35'},{id:'raspagem',name:'Raspagens',color:'#7b2d8b'},{id:'takedown',name:'Takedowns',color:'#2ecc71'},{id:'defesa',name:'Defesa/Escapes',color:'#e74c3c'}];
+const ACHIEVEMENTS_DEF=[{id:'first',name:'Primeiro Passo',desc:'1º treino',icon:'🥋',ok:s=>s.sessions>=1},{id:'week',name:'Semana Guerreira',desc:'7 dias seguidos',icon:'🔥',ok:s=>s.streak>=7},{id:'c50',name:'Meio Século',desc:'50 treinos',icon:'💪',ok:s=>s.sessions>=50},{id:'c100',name:'Centenário',desc:'100 treinos',icon:'🎖️',ok:s=>s.sessions>=100},{id:'comp',name:'Guerreiro',desc:'1ª competição',icon:'🏆',ok:s=>s.competitions>=1},{id:'roxa',name:'Roxo',desc:'Faixa roxa',icon:'🟣',ok:s=>s.beltIndex>=2},{id:'marrom',name:'Veterano',desc:'Faixa marrom',icon:'🟤',ok:s=>s.beltIndex>=3},{id:'preta',name:'Sensei',desc:'Faixa preta',icon:'⬛',ok:s=>s.beltIndex>=4}];
+const BONUSES=[{id:'technique',label:'🏆 Aprendeu técnica nova'},{id:'repeat',label:'🔁 Repetiu e fixou algo'},{id:'tap',label:'🥇 Finalizou alguém melhor'},{id:'study',label:'📚 Estudou vídeo / teoria'}];
+const SKILL_COLORS={guarda:'#1a6ee8',passagem:'#e8c547',finalizacao:'#ff6b35',raspagem:'#7b2d8b',takedown:'#2ecc71',defesa:'#e74c3c'};
+
+let data=null,chartInstance=null,chartBeltView='current';
+let activeSkills=new Set(SKILLS_DEF.map(s=>s.id));
+
+async function loadData(){
+  setStatus('loading','Carregando dados...');
+  try{
+    const res=await fetch(DATA_URL+'?t='+Date.now());
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    data=await res.json();
+    document.getElementById('loadingScreen').style.display='none';
+    if(data.publishedAt){
+      const d=new Date(data.publishedAt);
+      document.getElementById('topUpdated').textContent='Atualizado: '+d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    }
+    setStatus('ok','Dados carregados ✓');
+    renderAll();
+  }catch(e){
+    document.getElementById('loadingScreen').innerHTML='<div style="text-align:center;padding:40px"><div style="font-size:60px">⏳</div><div style="font-family:Bebas Neue,sans-serif;font-size:22px;letter-spacing:3px;color:#7a7a9a;margin-top:16px">AGUARDANDO PUBLICAÇÃO</div><div style="color:#7a7a9a;font-size:14px;margin-top:8px">O atleta ainda não publicou os dados.</div></div>';
+    setStatus('error','Dados não publicados ainda');
+  }
+}
+
+function setStatus(type,text){
+  document.getElementById('statusDot').className='status-dot '+type;
+  document.getElementById('statusText').textContent=text;
+}
+function starsFromScore(s){const n=Math.round(Math.min(100,s)/20);return'★'.repeat(n)+'☆'.repeat(5-n);}
+function formatDateBR(iso){if(!iso)return'—';const[,m,d]=iso.split('-');return`${d}/${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+m-1]}`;}
+function intensityLabel(v){return{light:'🌱 Leve',medium:'💪 Normal',hard:'🔥 Intenso'}[v]||'';}
+
+function renderBeltPath(){
+  const c=document.getElementById('beltPath');c.innerHTML='';
+  const cur=data.beltIndex||1;
+  BELTS.forEach((b,i)=>{
+    if(i===0)return;
+    const done=i<cur,active=i===cur;
+    const node=document.createElement('div');
+    node.className='belt-node'+(done?' done':active?' active':'');
+    let deg=0;
+    if(active)deg=data.degrees||0;
+    else{const bh=(data.beltHistory||[]).find(x=>x.beltIndex===i);if(bh)deg=bh.degrees||0;}
+    const dots=Array.from({length:4},(_,d)=>`<div class="degree-dot${d<deg?' earned':''}"></div>`).join('');
+    node.innerHTML=`<div class="belt-icon" style="background:${b.color}22;border:2px solid ${b.color}${done||active?'cc':'44'}"><span>${b.emoji}</span></div><span class="belt-label">${b.name}</span><div class="belt-degrees">${dots}</div>`;
+    c.appendChild(node);
+    if(i<4){const conn=document.createElement('div');conn.className='belt-connector'+(done?' done':'');c.appendChild(conn);}
+  });
+}
+
+function renderXP(){
+  const belt=BELTS[data.beltIndex||1];
+  const xp=data.currentXP||0,pct=Math.min(100,(xp/BELT_XP_TARGET)*100);
+  const totalPct=Math.min(100,((data.totalXP||0)/TOTAL_XP_MAX)*100);
+  const over=xp>BELT_XP_TARGET;
+  document.getElementById('xpFill').style.width=pct+'%';
+  document.getElementById('xpFill').style.background=over?'linear-gradient(90deg,#ff6b35,#e74c3c)':'linear-gradient(90deg,#e8c547,#ff6b35)';
+  document.getElementById('xpBeltLabel').textContent=`⚡ XP — Faixa ${belt.name}`;
+  document.getElementById('xpLabel').textContent=`${xp.toLocaleString()} / ${BELT_XP_TARGET.toLocaleString()} XP`;
+  document.getElementById('xpCaption').textContent=over?'Meta da faixa atingida! 🥋':`Faltam ${(BELT_XP_TARGET-xp).toLocaleString()} XP para a meta`;
+  document.getElementById('ringFill').style.strokeDashoffset=427-(totalPct/100)*427;
+  document.getElementById('ringPct').textContent=Math.round(totalPct)+'%';
+}
+
+function renderStats(){
+  document.getElementById('statDays').textContent=data.days||0;
+  document.getElementById('statSessions').textContent=data.sessions||0;
+  document.getElementById('statStreak').textContent=data.streak||0;
+  document.getElementById('statLevel').textContent=Math.floor((data.currentXP||0)/200)+1;
+}
+
+function renderSkills(){
+  const c=document.getElementById('skillsGrid');c.innerHTML='';
+  SKILLS_DEF.forEach(sk=>{
+    const val=(data.skills||{})[sk.id]||0,pct=Math.min(100,val);
+    const card=document.createElement('div');card.className='skill-card';
+    card.innerHTML=`<div class="skill-header"><span class="skill-name">${sk.name}</span><div class="skill-meta"><span class="skill-stars">${starsFromScore(pct)}</span><span class="skill-score" style="color:${sk.color}">${val}pts</span></div></div><div class="skill-bar-track"><div class="skill-bar-fill" style="width:${pct}%;background:${sk.color}"></div></div>`;
+    c.appendChild(card);
+  });
+}
+
+function renderAchievements(){
+  const c=document.getElementById('achievementsGrid');c.innerHTML='';
+  ACHIEVEMENTS_DEF.forEach(a=>{
+    const unlocked=a.ok(data);
+    const div=document.createElement('div');div.className='achievement '+(unlocked?'unlocked':'locked');
+    div.innerHTML=`<div class="achievement-icon">${a.icon}</div><div class="achievement-name">${a.name}</div><div class="achievement-desc">${a.desc}</div>`;
+    c.appendChild(div);
+  });
+}
+
+function renderBeltHistory(){
+  const bh=data.beltHistory||[],sec=document.getElementById('beltHistorySection');
+  if(!bh.length){sec.style.display='none';return;}
+  sec.style.display='';
+  document.getElementById('beltHistoryList').innerHTML=bh.map(b=>`
+    <div class="belt-history-item">
+      <div class="bhi-emoji">${b.beltEmoji||'🟦'}</div>
+      <div class="bhi-info">
+        <div class="bhi-title">Faixa ${b.beltName} — ${b.degrees||0} grau(s)</div>
+        <div class="bhi-sub">Promovido em ${formatDateBR(b.promotionDate)}</div>
+        <div class="bhi-stats">
+          <div class="bhi-stat">Treinos: <span>${b.sessions||0}</span></div>
+          <div class="bhi-stat">Dias: <span>${b.days||0}</span></div>
+          <div class="bhi-stat">XP: <span>${b.xp||0}</span></div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function buildSkillChips(snap){
+  if(!snap)return'';
+  return SKILLS_DEF.map(sk=>{const val=snap[sk.id]||0;return`<div class="hsk-chip"><span style="width:7px;height:7px;border-radius:50%;background:${sk.color};display:inline-block;flex-shrink:0"></span><span>${sk.name}</span><span class="hsk-stars">${starsFromScore(val)}</span><span class="hsk-score" style="color:${sk.color}">${val}pts</span></div>`;}).join('');
+}
+function toggleSkillChips(id){
+  const el=document.getElementById(id);if(!el)return;
+  const h=el.style.display==='none';el.style.display=h?'flex':'none';
+  const btn=el.previousElementSibling;if(btn)btn.textContent=h?'📊 Fechar atributos ▴':'📊 Ver atributos ▾';
+}
+
+function renderHistory(){
+  const c=document.getElementById('historyList');c.innerHTML='';
+  const hist=[...(data.history||[])].slice(0,20);
+  hist.forEach((h,i)=>{
+    const div=document.createElement('div');div.className='history-item'+(h.retro?' retro':'');
+    const hasSnap=h.skillsSnapshot&&Object.keys(h.skillsSnapshot).length>0;
+    const chipId='vskills_'+i;
+    div.innerHTML=`
+      <div class="history-date">${h.date||''}${h.retro?'<br><span style="font-size:9px;color:var(--accent2)">retroativo</span>':''}</div>
+      <div class="history-badge">${h.badge||'🥋'}</div>
+      <div class="history-info">
+        <div class="history-type">${h.type||''} <span style="font-size:11px;color:var(--text-dim)">${intensityLabel(h.intensity)}</span></div>
+        ${(h.bonusIds||[]).length?`<div class="history-note">${(h.bonusIds||[]).map(id=>BONUSES.find(b=>b.id===id)?.label||'').filter(Boolean).join(' · ')}</div>`:''}
+        ${h.note?`<div class="history-note">${h.note}</div>`:''}
+        ${hasSnap?`<button class="history-skills-toggle" onclick="toggleSkillChips('${chipId}')">📊 Ver atributos ▾</button><div class="history-skills" id="${chipId}" style="display:none">${buildSkillChips(h.skillsSnapshot)}</div>`:''}
+      </div>
+      <div class="history-xp">+${h.xp||0} XP</div>`;
+    c.appendChild(div);
+  });
+  if(!hist.length)c.innerHTML='<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:14px">Nenhum treino registrado ainda.</div>';
+}
+
+function getSnapshotsForView(){
+  if(chartBeltView==='current')return data.skillSnapshots||[];
+  const bh=(data.beltHistory||[])[chartBeltView];return bh?(bh.skillSnapshots||[]):[];
+}
+function renderChartTabs(){
+  const tabs=document.getElementById('chartBeltTabs');if(!tabs)return;
+  const items=[{key:'current',label:`${BELTS[data.beltIndex||1].emoji} Atual`},...(data.beltHistory||[]).map((bh,i)=>({key:i,label:`${bh.beltEmoji||'🟦'} ${bh.beltName}`}))];
+  tabs.innerHTML=items.map(t=>`<button class="chart-tab${chartBeltView===t.key?' active':''}" onclick="switchChartBelt('${t.key}')">${t.label}</button>`).join('');
+}
+function renderSkillToggles(){
+  const el=document.getElementById('chartSkillToggles');if(!el)return;
+  el.innerHTML=SKILLS_DEF.map(sk=>`<button class="skill-toggle${activeSkills.has(sk.id)?' active':''}" style="${activeSkills.has(sk.id)?'border-color:'+SKILL_COLORS[sk.id]+';background:'+SKILL_COLORS[sk.id]+'33;color:#fff':''}" onclick="toggleSkillChart('${sk.id}')">${sk.name}</button>`).join('');
+}
+function switchChartBelt(key){chartBeltView=key==='current'?'current':parseInt(key);renderChartTabs();renderChart();}
+function toggleSkillChart(id){if(activeSkills.has(id)){if(activeSkills.size>1)activeSkills.delete(id);}else activeSkills.add(id);renderSkillToggles();renderChart();}
+
+function renderChart(){
+  renderChartTabs();renderSkillToggles();
+  const snaps=getSnapshotsForView();
+  const empty=document.getElementById('chartEmpty'),canvas=document.getElementById('evolutionChart');
+  if(!canvas)return;
+  if(!snaps.length){canvas.style.display='none';if(empty)empty.style.display='';if(chartInstance){chartInstance.destroy();chartInstance=null;}return;}
+  canvas.style.display='';if(empty)empty.style.display='none';
+  const trainingDates=(chartBeltView==='current'?(data.history||[]):((data.beltHistory||[])[chartBeltView]?.history||[])).map(h=>h.dateISO).filter(Boolean);
+  const allDates=[...new Set([...snaps.map(s=>s.dateISO),...trainingDates])].filter(Boolean).sort();
+  if(!allDates.length){canvas.style.display='none';if(empty)empty.style.display='';return;}
+  const sortedSnaps=[...snaps].sort((a,b)=>a.dateISO.localeCompare(b.dateISO));
+  function getVal(skillId,dateISO){let v=0;for(const s of sortedSnaps){if(s.dateISO<=dateISO)v=s.skills?.[skillId]??v;else break;}return v;}
+  const labels=allDates.map(d=>formatDateBR(d));
+  const datasets=SKILLS_DEF.filter(sk=>activeSkills.has(sk.id)).map(sk=>({label:sk.name,data:allDates.map(d=>getVal(sk.id,d)),borderColor:SKILL_COLORS[sk.id],backgroundColor:SKILL_COLORS[sk.id]+'18',borderWidth:2,pointRadius:allDates.length<30?4:2,pointHoverRadius:6,tension:.35,fill:false}));
+  if(chartInstance){chartInstance.destroy();chartInstance=null;}
+  chartInstance=new Chart(canvas.getContext('2d'),{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#12121a',borderColor:'#2a2a3f',borderWidth:1,titleColor:'#e8e8f0',bodyColor:'#b0b0c8',padding:12,callbacks:{title:i=>`📅 ${i[0].label}`,label:i=>` ${i.dataset.label}: ${i.parsed.y}pts`}}},scales:{x:{ticks:{color:'#7a7a9a',font:{size:11},maxRotation:45,maxTicksLimit:10},grid:{color:'#1e1e2e'}},y:{min:0,max:100,ticks:{color:'#7a7a9a',font:{size:11},stepSize:20,callback:v=>v+'%'},grid:{color:'#1e1e2e'}}}}});
+}
+
+function renderAll(){renderBeltPath();renderXP();renderStats();renderSkills();renderChart();renderAchievements();renderBeltHistory();renderHistory();}
+
+loadData();
+setInterval(loadData,5*60*1000);
+</script>
+</body>
+</html>
